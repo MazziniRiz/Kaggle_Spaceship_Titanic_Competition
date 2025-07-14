@@ -66,6 +66,7 @@ def make_mi_scores(X,y,discrete_features):
 
 mi_scores = make_mi_scores(imputed_X_train, y_train, discrete_features)
 
+
 #Based on Observation ['Group','CryoSleep'] have the most effect as features
 # ['Spa','RoomService','VRDeck','ShoppingMall','FoodCourt'] have some influence
 
@@ -111,3 +112,18 @@ y_pred = my_model.predict(imputed_X_val)
 mean_absolute_error(y_pred, y_val)
 """
 #MAE = 0.282, Accuracy = 71.2%
+
+#Test4: Getting rid of features with 0 MI score
+'''''
+X_features = imputed_X_train[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
+X_val_features = imputed_X_val[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
+my_model = XGBRegressor(n=300)
+my_model.fit(X_features,y_train, verbose = False)
+
+y_pred = my_model.predict(X_val_features)
+
+mean_absolute_error(y_pred, y_val)
+'''''
+#MAE = 0.279, Accuracy = 72.1%
+
+#Next Approach maybe use k-means and PCA to test features, Optimize the preprocessing from SimpleImputer to something else.
