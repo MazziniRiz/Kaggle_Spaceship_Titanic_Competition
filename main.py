@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.impute import SimpleImputer
@@ -6,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
 import matplotlib as plt
 from sklearn.metrics import mean_absolute_error
+from sklearn.decomposition import PCA
 
 train_data = pd.read_csv('train.csv')
 test_data = pd.read_csv('test.csv')
@@ -40,19 +42,23 @@ X_train, X_val, y_train, y_val = train_test_split(X,y,test_size=0.2,random_state
 #Applying Ordinal Encoding
 label_X_train = X_train.copy()
 label_X_val = X_val.copy()
+label_X_test = X_test.copy()
 object_cols = [cols for cols in X_train.columns if X_train[cols].dtypes == 'object']
 
 ordinal_encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
 label_X_train[object_cols] = ordinal_encoder.fit_transform(X_train[object_cols])
 label_X_val[object_cols] = ordinal_encoder.transform(X_val[object_cols])
+label_X_test[object_cols] = ordinal_encoder.transform(X_test[object_cols])
 
-#Applying Simple Imputer
+# Test1: Applying Simple Imputer
 my_imputer = SimpleImputer(strategy='mean')
 imputed_X_train= pd.DataFrame(my_imputer.fit_transform(label_X_train))
 imputed_X_val = pd.DataFrame(my_imputer.transform(label_X_val))
+imputed_X_test = pd.DataFrame(my_imputer.transform(label_X_test))
 
 imputed_X_train.columns = label_X_train.columns
 imputed_X_val.columns = label_X_val.columns
+imputed_X_test.columns = label_X_test.columns
 
 #Testing to see which feature is relevant via. MI scores
 
@@ -66,15 +72,35 @@ def make_mi_scores(X,y,discrete_features):
 
 mi_scores = make_mi_scores(imputed_X_train, y_train, discrete_features)
 
+#Testing using PCA to find relevant features (INCREASED MAE AND DECREASED ACCURACY)
+
+'''''
+#Standardize
+X_scaled = (imputed_X_train - imputed_X_train.mean(axis=0))/imputed_X_train.std(axis=0)
+
+#Creating Principal Components
+pca = PCA()
+X_pca = pca.fit_transform(X_scaled)
+component_names = [f"PC{i+1}" for i in range(X_pca.shape[1])]
+X_pca = pd.DataFrame(X_pca, columns=component_names)
+
+#Wrap loadings up in a dataframe
+
+loadings = pd.DataFrame(pca.components_.T, columns=component_names, index=X.columns)
+
+imputed_X_train = imputed_X_train.join(X_pca)
+
+mi_scores_pca = make_mi_scores(imputed_X_train, y_train, discrete_features=False)
+'''
 
 #Based on Observation ['Group','CryoSleep'] have the most effect as features
 # ['Spa','RoomService','VRDeck','ShoppingMall','FoodCourt'] have some influence
 
 #Unsure about the label encoding on ['Group'], maybe fix it using a k-means cluster or a PCA?
 
-# Test 1: Using only ['Group','CryoSleep']
+# Test 1: Using only ['Group','CryoSleep'] 
 
-"""
+'''''
 X_features = imputed_X_train[['Group', 'CryoSleep']]
 X_val_features = imputed_X_val[['Group', 'CryoSleep']]
 my_model = XGBRegressor(n=500)
@@ -83,14 +109,14 @@ my_model.fit(X_features,y_train, verbose = False)
 y_pred = my_model.predict(X_val_features)
 
 mean_absolute_error(y_pred, y_val)
-"""
-
-#MAE = 0.388, Accuracy = 1-0.388 = 62% (Not Bad, can be better)
-
-
-# Test2: Using ['Group','CryoSleep'] and ['Spa','RoomService','VRDeck','ShoppingMall','FoodCourt']
-
 '''
+
+#MAE = 0.388, Accuracy = 1-0.388 = 62% (Not Bad, can be better) (SimpleImputer)
+
+
+# Test2: Using ['Group','CryoSleep'] and ['Spa','RoomService','VRDeck','ShoppingMall','FoodCourt'] 
+
+'''''
 X_features = imputed_X_train[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt']]
 X_val_features = imputed_X_val[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt']]
 my_model = XGBRegressor(n=300)
@@ -100,21 +126,21 @@ y_pred = my_model.predict(X_val_features)
 
 mean_absolute_error(y_pred, y_val)
 '''
-# MAE = 0.312, Accuracy = 68.7%
+# MAE = 0.312, Accuracy = 68.7% (SimpleImputer)
 
-#Test3: Use all features
-"""
+#Test3: Use all features 
+'''''
 my_model = XGBRegressor(n=300)
 my_model.fit(imputed_X_train,y_train, verbose = False)
 
 y_pred = my_model.predict(imputed_X_val)
 
 mean_absolute_error(y_pred, y_val)
-"""
-#MAE = 0.282, Accuracy = 71.2%
+'''
+#MAE = 0.282, Accuracy = 71.2% (SimpleImputer)
 
-#Test4: Getting rid of features with 0 MI score
-'''''
+#Test4: Getting rid of features with 0 MI score 
+
 X_features = imputed_X_train[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
 X_val_features = imputed_X_val[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
 my_model = XGBRegressor(n=300)
@@ -122,8 +148,18 @@ my_model.fit(X_features,y_train, verbose = False)
 
 y_pred = my_model.predict(X_val_features)
 
-mean_absolute_error(y_pred, y_val)
-'''''
-#MAE = 0.279, Accuracy = 72.1%
+#MAE = 0.279, Accuracy = 72.1% (SimpleImputer)
 
 #Next Approach maybe use k-means and PCA to test features, Optimize the preprocessing from SimpleImputer to something else.
+X_test_features = imputed_X_test[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
+y_pred_test = my_model.predict(X_test_features)
+
+
+output = pd.DataFrame({
+    'PassengerId': test_data['PassengerId'],
+    'Transported': y_pred_test
+})
+
+output.to_csv('Submission2.csv', index=False)
+
+
