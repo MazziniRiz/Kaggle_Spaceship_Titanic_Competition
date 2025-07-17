@@ -4,7 +4,7 @@ from sklearn.feature_selection import mutual_info_regression
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
-from xgboost import XGBRegressor
+from xgboost import XGBClassifier
 import matplotlib as plt
 from sklearn.metrics import mean_absolute_error
 from sklearn.decomposition import PCA
@@ -143,10 +143,11 @@ mean_absolute_error(y_pred, y_val)
 
 X_features = imputed_X_train[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
 X_val_features = imputed_X_val[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
-my_model = XGBRegressor(n=300)
+my_model = XGBClassifier(n=300)
 my_model.fit(X_features,y_train, verbose = False)
 
 y_pred = my_model.predict(X_val_features)
+
 
 #MAE = 0.279, Accuracy = 72.1% (SimpleImputer)
 
@@ -154,12 +155,14 @@ y_pred = my_model.predict(X_val_features)
 X_test_features = imputed_X_test[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
 y_pred_test = my_model.predict(X_test_features)
 
+y_pred_bool = [bool(x) for x in y_pred_test]
 
 output = pd.DataFrame({
     'PassengerId': test_data['PassengerId'],
-    'Transported': y_pred_test
+    'Transported': y_pred_bool
 })
 
 output.to_csv('Submission2.csv', index=False)
 
+#Changed Regressor to Classifier, Realized my dumb mistake, final score = 79% grading on the model
 
