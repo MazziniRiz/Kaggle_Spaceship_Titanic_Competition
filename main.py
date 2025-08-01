@@ -116,31 +116,31 @@ mean_absolute_error(y_pred, y_val)
 
 # Test2: Using ['Group','CryoSleep'] and ['Spa','RoomService','VRDeck','ShoppingMall','FoodCourt'] 
 
-'''''
+
 X_features = imputed_X_train[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt']]
 X_val_features = imputed_X_val[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt']]
-my_model = XGBRegressor(n=300)
+my_model = XGBClassifier(n=300)
 my_model.fit(X_features,y_train, verbose = False)
 
 y_pred = my_model.predict(X_val_features)
 
 mean_absolute_error(y_pred, y_val)
-'''
+
 # MAE = 0.312, Accuracy = 68.7% (SimpleImputer)
 
 #Test3: Use all features 
 '''''
-my_model = XGBRegressor(n=300)
+my_model = XGBClassifier(n=300)
 my_model.fit(imputed_X_train,y_train, verbose = False)
 
 y_pred = my_model.predict(imputed_X_val)
 
 mean_absolute_error(y_pred, y_val)
-'''
+'''''
 #MAE = 0.282, Accuracy = 71.2% (SimpleImputer)
 
 #Test4: Getting rid of features with 0 MI score 
-
+'''''
 X_features = imputed_X_train[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
 X_val_features = imputed_X_val[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
 my_model = XGBClassifier(n=300)
@@ -148,12 +148,13 @@ my_model.fit(X_features,y_train, verbose = False)
 
 y_pred = my_model.predict(X_val_features)
 
-
+'''
 #MAE = 0.279, Accuracy = 72.1% (SimpleImputer)
 
 #Next Approach maybe use k-means and PCA to test features, Optimize the preprocessing from SimpleImputer to something else.
-X_test_features = imputed_X_test[['Group', 'CryoSleep','Spa','RoomService','VRDeck','ShoppingMall','FoodCourt', 'HomePlanet', 'Deck', 'Age', 'Side', 'Num', 'Destination']]
-y_pred_test = my_model.predict(X_test_features)
+
+X_features_test = imputed_X_test[['Group', 'CryoSleep', 'Spa','RoomService','VRDeck','ShoppingMall','FoodCourt']]
+y_pred_test = my_model.predict(X_features_test)
 
 y_pred_bool = [bool(x) for x in y_pred_test]
 
@@ -162,7 +163,7 @@ output = pd.DataFrame({
     'Transported': y_pred_bool
 })
 
-output.to_csv('Submission2.csv', index=False)
+output.to_csv('Submission4.csv', index=False)
 
 #Changed Regressor to Classifier, Realized my dumb mistake, final score = 79% grading on the model
 
